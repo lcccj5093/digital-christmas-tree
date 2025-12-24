@@ -76,14 +76,55 @@ class LayeredChristmasTree {
         const darkGreenColor = new THREE.Color(0x0a3d0a); // 深林绿
         const snowColor = new THREE.Color(0xffffff);
 
+        // 创建着色器材质，支持 GPU 端的爆炸效果
+        this.treeMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uExplosion: { value: 0 },
+                uTime: { value: 0 },
+                uSize: { value: 0.12 }
+            },
+            vertexShader: `
+                attribute vec3 aRandom;
+                attribute vec3 aColor;
+                varying vec3 vColor;
+                uniform float uExplosion;
+                uniform float uTime;
+                uniform float uSize;
+                void main() {
+                    vColor = aColor;
+                    // 核心逻辑：在 GPU 端根据 uExplosion 插值位置
+                    vec3 pos = position + aRandom * uExplosion * 30.0;
+                    // 加入一点微弱的随风摆动
+                    pos.x += sin(uTime + position.y) * 0.05 * (1.0 - uExplosion);
+                    
+                    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                    gl_PointSize = uSize * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                void main() {
+                    float dist = distance(gl_PointCoord, vec2(0.5));
+                    if (dist > 0.5) discard;
+                    // 模拟柔和的粒子边缘
+                    float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+                    gl_FragColor = vec4(vColor, alpha);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
         tiers.forEach((tier, index) => {
             const pos = new Float32Array(tier.count * 3);
             const cols = new Float32Array(tier.count * 3);
+            const randoms = new Float32Array(tier.count * 3);
 
             for (let i = 0; i < tier.count; i++) {
                 const ratio = Math.random();
                 const h = ratio * tier.h;
-                // 利用噪音让边缘不整齐，形成笔触感
                 const angle = Math.random() * Math.PI * 2;
                 const rNoise = Math.sin(angle * 8) * 0.4 + (Math.random() - 0.5) * 0.3;
                 const r = (1 - ratio) * tier.rBase + ratio * tier.rTop + rNoise;
@@ -92,7 +133,11 @@ class LayeredChristmasTree {
                 pos[i * 3 + 1] = h + tier.y;
                 pos[i * 3 + 2] = Math.sin(angle) * r;
 
-                // 混合深浅绿色，极少量白色积雪
+                // 爆炸偏移量
+                randoms[i * 3] = (Math.random() - 0.5) * 2.0;
+                randoms[i * 3 + 1] = (Math.random() - 0.5) * 2.0;
+                randoms[i * 3 + 2] = (Math.random() - 0.5) * 2.0;
+
                 let colMix;
                 const rand = Math.random();
                 if (rand > 0.95) colMix = snowColor;
@@ -105,14 +150,13 @@ class LayeredChristmasTree {
             }
 
             const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-            const mat = new THREE.PointsMaterial({ size: 0.08, vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
-            const points = new THREE.Points(geo, mat);
-            points.userData.originals = new Float32Array(pos);
+            geo.setAttribute('aColor', new THREE.BufferAttribute(cols, 3));
+            geo.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 3));
+
+            const points = new THREE.Points(geo, this.treeMaterial);
             this.treeGroup.add(points);
             this.particles.push(points);
 
-            // 在每一层添加 2-3 个彩色大灯珠
             this.addOrnaments(tier);
         });
 
@@ -182,18 +226,23 @@ class LayeredChristmasTree {
         this.noteIndex = 0;
         this.nextNoteTime = 0;
 
-        const E4 = 329.63, G4 = 392.00, C4 = 261.63, D4 = 293.66, F4 = 349.23;
+        const G3 = 196.00, A3 = 220.00, B3 = 246.94, C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.00, A4 = 440.00, B4 = 493.88, C5 = 523.25, D5 = 587.33, E5 = 659.25, F5 = 698.46;
+
+        // We Wish You a Merry Christmas 旋律 (更欢快稳定)
         this.melody = [
-            [E4, 0.2], [E4, 0.2], [E4, 0.4], [E4, 0.2], [E4, 0.2], [E4, 0.4],
-            [E4, 0.2], [G4, 0.2], [C4, 0.3], [D4, 0.1], [E4, 0.8],
-            [F4, 0.2], [F4, 0.2], [F4, 0.2], [F4, 0.2], [F4, 0.2], [E4, 0.2], [E4, 0.2]
+            [G4, 0.4], [C5, 0.4], [C5, 0.2], [D5, 0.2], [C5, 0.2], [B4, 0.2], [A4, 0.4], [A4, 0.4],
+            [A4, 0.4], [D5, 0.4], [D5, 0.2], [E5, 0.2], [D5, 0.2], [C5, 0.2], [B4, 0.4], [G4, 0.4],
+            [G4, 0.4], [E5, 0.4], [E5, 0.2], [F5, 0.2], [E5, 0.2], [D5, 0.2], [C5, 0.4], [A4, 0.4],
+            [G4, 0.2], [G4, 0.2], [A4, 0.4], [D5, 0.4], [B4, 0.4], [C5, 0.8],
+            [G4, 0.4], [C5, 0.4], [C5, 0.4], [C5, 0.4], [B4, 0.8],
+            [B4, 0.4], [C5, 0.4], [B4, 0.4], [A4, 0.4], [G4, 0.8]
         ];
 
         // 浮动交互提示
         this.hint = document.createElement('div');
         this.hint.id = 'audio-hint';
         this.hint.innerHTML = '✨ 挥挥手或点击屏幕，唤醒圣诞旋律 ✨';
-        this.hint.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); color:white; background:rgba(0,0,0,0.6); padding:20px 40px; border-radius:50px; font-weight:bold; z-index:2000; pointer-events:none; border:1px solid #00ffff; backdrop-filter:blur(5px); transition: opacity 0.5s; text-align:center;';
+        this.hint.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); color:white; background:rgba(0,0,0,0.6); padding:20px 40px; border-radius:50px; font-weight:bold; z-index:2000; pointer-events:none; border:1px solid #00ffff; backdrop-filter:blur(5px); transition: opacity 0.5s; text-align:center; box-shadow: 0 0 20px rgba(0,255,255,0.4);';
         document.body.appendChild(this.hint);
 
         window.addEventListener('mousedown', () => this.startLogic());
@@ -211,7 +260,7 @@ class LayeredChristmasTree {
                     this.hint.style.opacity = '0';
                     setTimeout(() => this.hint.remove(), 500);
                 }
-                console.log('圣诞旋律已唤醒');
+                console.log('圣诞旋律已唤醒: We Wish You a Merry Christmas');
             } catch (e) {
                 console.error('音频唤醒受阻:', e);
             }
@@ -220,26 +269,41 @@ class LayeredChristmasTree {
 
     scheduler() {
         if (!this.musicPlaying) return;
-        while (this.nextNoteTime < this.audioCtx.currentTime + 0.1) {
+        // 增加预加载时间(从0.1s增加到0.25s)以抵消3D渲染带来的主线程阻塞
+        while (this.nextNoteTime < this.audioCtx.currentTime + 0.25) {
             this.playNote(this.melody[this.noteIndex][0], this.nextNoteTime, this.melody[this.noteIndex][1]);
-            this.nextNoteTime += this.melody[this.noteIndex][1] + 0.05;
+            // 增加一点点的音符间隙，让感觉更清晰
+            this.nextNoteTime += this.melody[this.noteIndex][1] + 0.02;
             this.noteIndex = (this.noteIndex + 1) % this.melody.length;
         }
-        setTimeout(() => this.scheduler(), 50);
+        setTimeout(() => this.scheduler(), 40);
     }
 
     playNote(freq, time, duration) {
         if (!this.audioCtx) return;
-        const osc = this.audioCtx.createOscillator();
+        // 使用两个振荡器叠加，模拟圣诞铃铛/八音盒的清脆感
+        const osc1 = this.audioCtx.createOscillator();
+        const osc2 = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, time);
-        gain.gain.setValueAtTime(0.1, time);
-        gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-        osc.connect(gain);
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(freq, time);
+
+        osc2.type = 'triangle'; // 增加一点谐音
+        osc2.frequency.setValueAtTime(freq * 2, time); // 高八度
+
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(0.12, time + 0.02); // 快速开启
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + duration * 1.5); // 较长的衰减模拟余音
+
+        osc1.connect(gain);
+        osc2.connect(gain);
         gain.connect(this.audioCtx.destination);
-        osc.start(time);
-        osc.stop(time + duration);
+
+        osc1.start(time);
+        osc1.stop(time + duration * 1.5);
+        osc2.start(time);
+        osc2.stop(time + duration * 1.5);
     }
 
     initHandTracking() {
@@ -299,18 +363,14 @@ class LayeredChristmasTree {
     explode() {
         if (this.state !== 'normal') return;
         this.state = 'exploding';
-        this.particles.forEach(p => {
-            const arr = p.geometry.attributes.position.array;
-            for (let i = 0; i < arr.length / 3; i++) {
-                gsap.to(arr, {
-                    [i * 3]: (Math.random() - 0.5) * 50 + arr[i * 3],
-                    [i * 3 + 1]: (Math.random() - 0.5) * 50 + arr[i * 3 + 1],
-                    [i * 3 + 2]: (Math.random() - 0.5) * 50 + arr[i * 3 + 2],
-                    duration: 1.5, ease: "power2.out",
-                    onUpdate: () => p.geometry.attributes.position.needsUpdate = true
-                });
-            }
+
+        // 只需动画化一个着色器 Uniform 变量，性能提升 1000 倍
+        gsap.to(this.treeMaterial.uniforms.uExplosion, {
+            value: 1,
+            duration: 1.5,
+            ease: "power2.out"
         });
+
         [...this.ornaments, this.trunk, this.topStar].forEach(o => {
             gsap.to(o.position, {
                 x: (Math.random() - 0.5) * 30, y: (Math.random() - 0.5) * 30, z: (Math.random() - 0.5) * 30,
@@ -324,17 +384,13 @@ class LayeredChristmasTree {
     contract() {
         if (this.state !== 'exploded') return;
         this.state = 'contracting';
-        this.particles.forEach(p => {
-            const arr = p.geometry.attributes.position.array;
-            const orig = p.userData.originals;
-            for (let i = 0; i < arr.length / 3; i++) {
-                gsap.to(arr, {
-                    [i * 3]: orig[i * 3], [i * 3 + 1]: orig[i * 3 + 1], [i * 3 + 2]: orig[i * 3 + 2],
-                    duration: 2, ease: "expo.inOut",
-                    onUpdate: () => p.geometry.attributes.position.needsUpdate = true
-                });
-            }
+
+        gsap.to(this.treeMaterial.uniforms.uExplosion, {
+            value: 0,
+            duration: 2,
+            ease: "expo.inOut"
         });
+
         [...this.ornaments, this.trunk, this.topStar].forEach(o => {
             const orig = o.userData.origPos;
             gsap.to(o.position, { x: orig.x, y: orig.y, z: orig.z, duration: 2, ease: "expo.inOut" });
@@ -351,6 +407,8 @@ class LayeredChristmasTree {
         if (!this.isUserInteracting) {
             this.treeGroup.rotation.y += this.autoRotationSpeed;
         }
+
+        if (this.treeMaterial) this.treeMaterial.uniforms.uTime.value = performance.now() * 0.001;
 
         if (this.topStar) this.topStar.rotation.y += 0.05;
         if (this.snow) this.snow.rotation.y += 0.002;
