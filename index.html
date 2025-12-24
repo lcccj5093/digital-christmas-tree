@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Christmas - 交互式数字生命树</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 加载 MediaPipe 相关库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="container"></div>
+
+    <video id="input-video" style="display: none;"></video>
+    <canvas id="output-canvas"></canvas>
+
+    <div id="overlay">
+        <h1>PROJECT CYBER CHRISTMAS</h1>
+        <div id="status">系统初始化中...</div>
+        <div class="instructions">
+            <p>🤏 捏合并移动: 抓取与旋转</p>
+            <p>👐 双手向外张开: 粒子炸开 (EXPLODE)</p>
+            <p>🤲 双手向内合拢: 粒子重构 (REFORM)</p>
+            <p>⌨️ 按 'E' 键测试炸开 / 'R' 键恢复</p>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+                "gsap": "https://unpkg.com/gsap@3.12.5/index.js"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
