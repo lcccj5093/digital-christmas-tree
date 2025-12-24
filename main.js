@@ -173,18 +173,18 @@ class LayeredChristmasTree {
             else starShape.lineTo(x, y);
         }
 
-        const extrudeSettings = { depth: 0.15, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 3 };
+        const extrudeSettings = { depth: 0.1, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 3 };
         const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
         const starMat = new THREE.MeshStandardMaterial({
-            color: 0xfff200,
-            emissive: 0xfff200,
-            emissiveIntensity: 6,
-            metalness: 1,
-            roughness: 0
+            color: 0xffcc00,
+            emissive: 0xffcc00,
+            emissiveIntensity: 1.5, // 降低强度以看清轮廓
+            metalness: 0.8,
+            roughness: 0.2
         });
         const star = new THREE.Mesh(starGeo, starMat);
-        star.position.y = 7.4;
-        star.rotation.x = Math.PI / 2; // 让星星垂直
+        star.position.y = 7.6;
+        // 移除 rotation.x 的旋转，让星星垂直站立
         star.userData.origPos = star.position.clone();
         this.treeGroup.add(star);
         this.topStar = star;
