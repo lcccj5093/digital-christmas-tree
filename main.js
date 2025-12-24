@@ -191,21 +191,6 @@ class LayeredChristmasTree {
         this.trunk = trunk;
     }
 
-    // createGlowingSpiral() { // Removed createGlowingSpiral function
-    //     const curvePoints = [];
-    //     for (let t = 0; t < 30; t += 0.2) {
-    //         const h = (t / 30) * 12 - 4.5;
-    //         const r = (1 - t / 35) * 6.5;
-    //         curvePoints.push(new THREE.Vector3(Math.cos(t * 1.5) * r, h, Math.sin(t * 1.5) * r));
-    //     }
-    //     const curve = new THREE.CatmullRomCurve3(curvePoints);
-    //     const tubeGeo = new THREE.TubeGeometry(curve, 100, 0.06, 8, false);
-    //     const tubeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 3 });
-    //     this.spiral = new THREE.Mesh(tubeGeo, tubeMat);
-    //     this.spiral.userData.origPos = new THREE.Vector3(0, 0, 0);
-    //     this.treeGroup.add(this.spiral);
-    // }
-
     createSnowBackground() {
         const count = 3000;
         const pos = new Float32Array(count * 3);
