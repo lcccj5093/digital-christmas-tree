@@ -160,9 +160,31 @@ class LayeredChristmasTree {
             this.addOrnaments(tier);
         });
 
-        // 顶端大星
-        const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 4 }));
-        star.position.y = 7.5;
+        // 顶端五角星
+        const starShape = new THREE.Shape();
+        const outerRadius = 0.5;
+        const innerRadius = 0.2;
+        for (let i = 0; i < 11; i++) {
+            const angle = (i * Math.PI * 2) / 10 - Math.PI / 2;
+            const r = i % 2 === 0 ? outerRadius : innerRadius;
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r;
+            if (i === 0) starShape.moveTo(x, y);
+            else starShape.lineTo(x, y);
+        }
+
+        const extrudeSettings = { depth: 0.15, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 3 };
+        const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
+        const starMat = new THREE.MeshStandardMaterial({
+            color: 0xfff200,
+            emissive: 0xfff200,
+            emissiveIntensity: 6,
+            metalness: 1,
+            roughness: 0
+        });
+        const star = new THREE.Mesh(starGeo, starMat);
+        star.position.y = 7.4;
+        star.rotation.x = Math.PI / 2; // 让星星垂直
         star.userData.origPos = star.position.clone();
         this.treeGroup.add(star);
         this.topStar = star;
