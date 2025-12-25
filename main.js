@@ -341,7 +341,14 @@ class LayeredChristmasTree {
             onFrame: async () => await hands.send({ image: document.getElementById('input-video') }),
             width: 320, height: 240
         });
-        cam.start();
+
+        // 增加错误捕获，防止无摄像头设备报错中断
+        cam.start().catch(err => {
+            console.warn('Camera not found or permission denied. Running in auto mode.', err);
+            const statusEl = document.getElementById('status');
+            if (statusEl) statusEl.innerText = '未检测到摄像头 - 自动演示模式';
+            this.isUserInteracting = false;
+        });
     }
 
     onHandResults(results) {
