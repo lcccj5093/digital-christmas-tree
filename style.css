@@ -70,23 +70,3 @@ body {
 #start-btn:active {
     transform: translate(-50%, -50%) scale(0.95);
 }
-
-#debug-log {
-    position: fixed;
-    bottom: 5px;
-    right: 5px;
-    width: 200px;
-    max-height: 150px;
-    overflow-y: auto;
-    font-size: 10px;
-    color: #00ff00;
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid #005500;
-    pointer-events: none;
-    /* Let touches pass through */
-    z-index: 9999;
-    padding: 5px;
-    font-family: monospace;
-    display: block;
-    /* Visible by default for now */
-}
