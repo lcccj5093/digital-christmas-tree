@@ -28,8 +28,9 @@ class LayeredChristmasTree {
         this.createHierarchicalTree();
         this.createTrunk();
         this.createSnowBackground();
-        this.initHandTracking();
-        this.initMusic();
+
+        // 改为等待用户点击按钮后初始化
+        this.bindUserInteraction();
 
         this.camera.position.set(0, 5, 25);
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -37,6 +38,24 @@ class LayeredChristmasTree {
 
         window.addEventListener('resize', () => this.onWindowResize());
         this.animate();
+    }
+
+    bindUserInteraction() {
+        // 先初始化音乐数据，但不播放
+        this.initMusicData();
+
+        const startBtn = document.getElementById('start-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                startBtn.classList.add('hidden'); // 隐藏按钮
+
+                // 1. 尝试初始化音频 (作为用户手势的一部分)
+                this.startAudio();
+
+                // 2. 启动摄像头
+                this.initHandTracking();
+            });
+        }
     }
 
     initRenderer() {
@@ -227,7 +246,7 @@ class LayeredChristmasTree {
         this.scene.add(this.snow);
     }
 
-    initMusic() {
+    initMusicData() {
         this.audioCtx = null;
         this.musicPlaying = false;
         this.noteIndex = 0;
@@ -245,32 +264,21 @@ class LayeredChristmasTree {
             [B4, 0.4], [C5, 0.4], [B4, 0.4], [A4, 0.4], [G4, 0.8]
         ];
 
-        // 浮动交互提示
-        this.hint = document.createElement('div');
-        this.hint.id = 'audio-hint';
-        this.hint.innerHTML = '✨ 挥挥手或点击屏幕，唤醒圣诞旋律 ✨';
-        this.hint.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); color:white; background:rgba(0,0,0,0.6); padding:20px 40px; border-radius:50px; font-weight:bold; z-index:2000; pointer-events:none; border:1px solid #00ffff; backdrop-filter:blur(5px); transition: opacity 0.5s; text-align:center; box-shadow: 0 0 20px rgba(0,255,255,0.4);';
-        document.body.appendChild(this.hint);
-
-        window.addEventListener('mousedown', () => this.startLogic());
-        window.addEventListener('touchstart', () => this.startLogic());
     }
 
-    startLogic() {
+    startAudio() {
         if (!this.audioCtx) {
             try {
                 this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 this.musicPlaying = true;
                 this.nextNoteTime = this.audioCtx.currentTime;
                 this.scheduler();
-                if (this.hint) {
-                    this.hint.style.opacity = '0';
-                    setTimeout(() => this.hint.remove(), 500);
-                }
                 console.log('圣诞旋律已唤醒: We Wish You a Merry Christmas');
             } catch (e) {
                 console.error('音频唤醒受阻:', e);
             }
+        } else if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
         }
     }
 
