@@ -14,7 +14,9 @@
 <body>
     <div id="container"></div>
 
-    <video id="input-video" style="display: none;"></video>
+    <!-- 关键修复：iOS Safari 需要 playsinline 和不在 display:none 状态下才能处理视频帧 -->
+    <video id="input-video" playsinline muted autoplay
+        style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1;"></video>
     <canvas id="output-canvas"></canvas>
 
     <div id="overlay">
@@ -36,7 +38,7 @@
             }
         }
     </script>
-    <script type="module" src="main.js?v=1.1"></script>
+    <script type="module" src="main.js?v=1.2"></script>
 </body>
 
 </html>
