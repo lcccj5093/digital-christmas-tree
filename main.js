@@ -342,13 +342,20 @@ class LayeredChristmasTree {
             width: 320, height: 240
         });
 
+        // 提示用户授权
+        const statusEl = document.getElementById('status');
+        if (statusEl) statusEl.innerText = '正在连接视觉中枢...请授予摄像头权限 📷';
+
         // 增加错误捕获，防止无摄像头设备报错中断
-        cam.start().catch(err => {
-            console.warn('Camera not found or permission denied. Running in auto mode.', err);
-            const statusEl = document.getElementById('status');
-            if (statusEl) statusEl.innerText = '未检测到摄像头 - 自动演示模式';
-            this.isUserInteracting = false;
-        });
+        cam.start()
+            .then(() => {
+                if (statusEl) statusEl.innerText = '视觉系统就绪 - 等待手势 👋';
+            })
+            .catch(err => {
+                console.warn('Camera not found or permission denied. Running in auto mode.', err);
+                if (statusEl) statusEl.innerText = '⚠️ 权限被拒绝或无设备 - 自动演示模式';
+                this.isUserInteracting = false;
+            });
     }
 
     onHandResults(results) {
