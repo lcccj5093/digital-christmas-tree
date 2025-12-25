@@ -345,12 +345,13 @@ class LayeredChristmasTree {
     initHandTracking() {
         if (!window.Hands) return;
 
-        // 防止重复初始化
-        if (this.isCameraRunning) return;
+        // 防止重复初始化：如果正在初始化或已经运行，直接返回
+        if (this.isCameraInitializing || this.isCameraRunning) return;
+        this.isCameraInitializing = true;
 
-        const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
-        hands.onResults((res) => {
+        this.hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+        this.hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+        this.hands.onResults((res) => {
             if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                 // 如果音频未启动，尝试启动（这里只是作为备用，主要依赖点击启动）
                 if (this.audioCtx && this.audioCtx.state === 'suspended') this.startAudio();
@@ -370,8 +371,9 @@ class LayeredChristmasTree {
                 this.isUserInteracting = false;
             }
         });
-        const cam = new window.Camera(document.getElementById('input-video'), {
-            onFrame: async () => await hands.send({ image: document.getElementById('input-video') }),
+
+        this.mediaPipeCam = new window.Camera(document.getElementById('input-video'), {
+            onFrame: async () => await this.hands.send({ image: document.getElementById('input-video') }),
             width: 320, height: 240
         });
 
@@ -380,7 +382,7 @@ class LayeredChristmasTree {
         if (statusEl) statusEl.innerText = '正在连接视觉中枢...请授予摄像头权限 📷';
 
         // 增加错误捕获，防止无摄像头设备报错中断
-        cam.start()
+        this.mediaPipeCam.start()
             .then(() => {
                 if (statusEl) statusEl.innerText = '视觉系统就绪 - 等待手势 👋';
                 this.isCameraRunning = true;
@@ -390,6 +392,9 @@ class LayeredChristmasTree {
                 if (statusEl) statusEl.innerText = '⚠️ 权限被拒绝或无设备 - 自动演示模式';
                 this.isUserInteracting = false;
                 this.isCameraRunning = false;
+            })
+            .finally(() => {
+                this.isCameraInitializing = false;
             });
     }
 
