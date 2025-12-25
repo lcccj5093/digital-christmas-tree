@@ -41,19 +41,40 @@ class LayeredChristmasTree {
     }
 
     bindUserInteraction() {
-        // 先初始化音乐数据，但不播放
+        // 先初始化音乐数据
         this.initMusicData();
+        this.isCameraRunning = false;
 
         const startBtn = document.getElementById('start-btn');
+        const checkAndStart = async () => {
+            try {
+                // 尝试查询摄像头权限状态
+                const permission = await navigator.permissions.query({ name: 'camera' });
+                if (permission.state === 'granted') {
+                    // 1. 已授权：直接启动摄像头
+                    console.log('摄像头权限已授予，自动启动视觉跟踪');
+                    this.initHandTracking();
+                    // 更新按钮为纯音乐启动
+                    if (startBtn) startBtn.innerText = '开启音乐 🎵';
+                }
+            } catch (e) {
+                // 浏览器不支持或通过非标准方式
+                console.log('Permission check not supported, waiting for user interaction.');
+            }
+        };
+        checkAndStart();
+
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 startBtn.classList.add('hidden'); // 隐藏按钮
 
-                // 1. 尝试初始化音频 (作为用户手势的一部分)
+                // 无论是否已启动摄像头，这里都统一尝试启动音频
                 this.startAudio();
 
-                // 2. 启动摄像头
-                this.initHandTracking();
+                // 如果之前没自动启动（例如未授权状态），这里会触发授权弹窗
+                if (!this.isCameraRunning) {
+                    this.initHandTracking();
+                }
             });
         }
     }
@@ -323,12 +344,16 @@ class LayeredChristmasTree {
 
     initHandTracking() {
         if (!window.Hands) return;
+
+        // 防止重复初始化
+        if (this.isCameraRunning) return;
+
         const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
         hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
         hands.onResults((res) => {
             if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
-                // 核心：一旦检测到手，立刻尝试启动音频逻辑
-                this.startLogic();
+                // 如果音频未启动，尝试启动（这里只是作为备用，主要依赖点击启动）
+                if (this.audioCtx && this.audioCtx.state === 'suspended') this.startAudio();
 
                 this.isUserInteracting = true;
                 const lm = res.multiHandLandmarks[0];
@@ -358,11 +383,13 @@ class LayeredChristmasTree {
         cam.start()
             .then(() => {
                 if (statusEl) statusEl.innerText = '视觉系统就绪 - 等待手势 👋';
+                this.isCameraRunning = true;
             })
             .catch(err => {
                 console.warn('Camera not found or permission denied. Running in auto mode.', err);
                 if (statusEl) statusEl.innerText = '⚠️ 权限被拒绝或无设备 - 自动演示模式';
                 this.isUserInteracting = false;
+                this.isCameraRunning = false;
             });
     }
 
