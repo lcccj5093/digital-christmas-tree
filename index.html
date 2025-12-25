@@ -9,6 +9,35 @@
     <!-- 加载 MediaPipe 相关库 -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script>
+        // Global Error Logger for Mobile Debugging
+        window.logBuffer = [];
+        function logToScreen(msg) {
+            const el = document.getElementById('debug-log');
+            if (el) {
+                const p = document.createElement('div');
+                p.innerText = '> ' + msg;
+                el.appendChild(p);
+                el.scrollTop = el.scrollHeight;
+            } else {
+                window.logBuffer.push(msg);
+            }
+        }
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            logToScreen(`Error: ${msg} @ ${lineNo}:${columnNo}`);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function (event) {
+            logToScreen(`Promise Error: ${event.reason}`);
+        });
+        window.addEventListener('DOMContentLoaded', () => {
+            const el = document.getElementById('debug-log');
+            if (el && window.logBuffer.length > 0) {
+                window.logBuffer.forEach(m => logToScreen(m));
+            }
+            logToScreen('DOM Loaded.');
+        });
+    </script>
 </head>
 
 <body>
@@ -18,6 +47,7 @@
     <video id="input-video" playsinline muted autoplay
         style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1;"></video>
     <canvas id="output-canvas"></canvas>
+    <div id="debug-log"></div>
 
     <div id="overlay">
         <h1>PROJECT CYBER CHRISTMAS</h1>
