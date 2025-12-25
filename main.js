@@ -345,6 +345,18 @@ class LayeredChristmasTree {
     initHandTracking() {
         if (!window.Hands) return;
 
+        // 核心安全检查：浏览器禁止在非安全环境(file:// 或 http://)调用摄像头
+        if (!window.isSecureContext) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.style.display = 'block'; // Ensure it's visible for error
+                statusEl.innerText = '⚠️ 严重错误：浏览器禁止在当前环境调用摄像头。\n请不要直接双击打开 HTML 文件。\n必须部署到 HTTPS 网站 (如 Vercel) 访问。';
+                statusEl.style.color = '#ff3333';
+            }
+            alert('无法启动摄像头：\n浏览器安全限制禁止在 file:// 或 http:// 协议下使用摄像头。\n\n请将网页部署到 HTTPS 服务器，或在本地搭建 localhost 服务运行。');
+            return;
+        }
+
         // 防止重复初始化：如果正在初始化或已经运行，直接返回
         if (this.isCameraInitializing || this.isCameraRunning) return;
         this.isCameraInitializing = true;
